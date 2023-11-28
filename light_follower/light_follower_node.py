@@ -28,6 +28,9 @@ class light_follower_node(Node):
         super().__init__('light_follower_node')
 
         self.robot1_cmd_vel_pub =  self.create_publisher(Twist, 'robot1/cmd_vel', 1)
+        self.robot2_cmd_vel_pub =  self.create_publisher(Twist, 'robot2/cmd_vel', 1)
+        self.robot3_cmd_vel_pub =  self.create_publisher(Twist, 'robot3/cmd_vel', 1)
+        self.robot4_cmd_vel_pub =  self.create_publisher(Twist, 'robot4/cmd_vel', 1)
 
         self.inital_pose_sub = self.create_subscription(PoseWithCovarianceStamped, 'initialpose', self.initial_pose_callback, rclpy.qos.qos_profile_sensor_data)
 
@@ -117,16 +120,30 @@ class light_follower_node(Node):
                     # self.dwa.ob = ob_
                     # print(self.u_list[i])
                     self.dwa.u = self.u_list[i]
-                    self.u_list[i] = self.dwa.loop()
+                    self.u_list[i] = copy.deepcopy(self.dwa.loop())
                     # print("robot" + str(i+1) , self.u_list[i])
 
-                self.cmd_vel.linear.x = self.u_list[0][0]
-                self.cmd_vel.angular.z = self.u_list[0][1]
+                    # cmd_vel pub
+                    self.cmd_vel.linear.x = copy.deepcopy(self.u_list[i][0])
+                    self.cmd_vel.angular.z = copy.deepcopy(self.u_list[i][1])
+                    print(i, cmd_vel)
+
+                    if i == 0:
+                        self.robot1_cmd_vel_pub.publish(self.cmd_vel)
+                    if i == 1:
+                        self.robot2_cmd_vel_pub.publish(self.cmd_vel)
+                    if i == 2:
+                        self.robot3_cmd_vel_pub.publish(self.cmd_vel)
+                    if i == 3:
+                        self.robot4_cmd_vel_pub.publish(self.cmd_vel)
+
+                # self.cmd_vel.linear.x = self.u_list[0][0]
+                # self.cmd_vel.angular.z = self.u_list[0][1]
                 # print(self.get_pos_list[0])
                 # print(self.get_yaw_list[0])
                 # print(self.cmd_vel)
-                print(self.u_list[0])
-                self.robot1_cmd_vel_pub.publish(self.cmd_vel)
+                # print(self.dwa.ob)
+                # self.robot1_cmd_vel_pub.publish(self.cmd_vel)
 
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
             self.get_logger().info(f'Exception: {e}')

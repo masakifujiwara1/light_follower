@@ -11,18 +11,18 @@ class Config():
 
     def __init__(self):
         # robot parameter
-        self.max_speed = 0.2  # [m/s]
-        self.min_speed = -0.5  # [m/s]
-        self.max_yawrate = 20.0 * math.pi / 180.0  # [rad/s]
-        self.max_accel = 0.2  # [m/ss]
-        self.max_dyawrate = 10.0 * math.pi / 180.0  # [rad/ss]
+        self.max_speed = 0.3  # [m/s]
+        self.min_speed = -0.1  # [m/s]
+        self.max_yawrate = 40.0 * math.pi / 180.0  # [rad/s]
+        self.max_accel = 0.4  # [m/ss]
+        self.max_dyawrate = 40.0 * math.pi / 180.0  # [rad/ss]
         self.v_reso = 0.01  # [m/s]
         self.yawrate_reso = 0.1 * math.pi / 180.0  # [rad/s]
         self.dt = 0.1  # [s]
-        self.predict_time = 1.7  # [s]
+        self.predict_time = 3.0  # [s]
         self.to_goal_cost_gain = 1.0
         self.speed_cost_gain = 1.0
-        self.robot_radius = 0.18  # [m]
+        self.robot_radius = 0.20  # [m]
 
 class dwa_approach():
     def __init__(self, NUM_ROBOT=4, GOAL=np.array([10, 10]), X=np.array([0.0, 0.0, math.pi / 8.0, 0.0, 0.0])):
