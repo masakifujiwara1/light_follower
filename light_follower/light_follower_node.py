@@ -40,7 +40,7 @@ class light_follower_node(Node):
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-        self.timer = self.create_timer(0.1, self.timer_callback)
+        self.timer = self.create_timer(0.025, self.timer_callback)
 
         # self.time_period = TIME_PERIOD
         # self.tmr = self.create_timer(self.time_period, self.callback)
@@ -62,6 +62,7 @@ class light_follower_node(Node):
             self.u_list[i] = np.array([0.0, 0.0])
 
         self.ob = np.matrix(np.arange(0., NUM_ROBOT*2.).reshape(NUM_ROBOT, 2))
+        self.ob *= 5
 
         self.goal_flag = False
 
@@ -94,15 +95,17 @@ class light_follower_node(Node):
     def timer_callback(self):
         try:
             for i in range(NUM_ROBOT):
-                transform = self.tf_buffer.lookup_transform('robot' + str(i+1), 'map', rclpy.time.Time())
+            # for i in range(1):
+                transform = self.tf_buffer.lookup_transform('map', 'robot' + str(i+1), rclpy.time.Time())
                 position = transform.transform.translation
                 rotation = transform.transform.rotation
                 (roll, pitch, yaw) = self.euler_from_quaternion(rotation)
-                # self.ob[i] = copy.deepcopy(np.array[position.x, position.y])
                 self.ob[i] = copy.deepcopy(np.array([position.x, position.y]))
                 self.get_pos_list[i] = copy.deepcopy(position)
                 self.get_yaw_list[i] = copy.deepcopy(yaw)
             self.init = True
+
+            # print(self.ob)
 
             if self.init and self.goal_flag:
                 # debug
@@ -110,8 +113,9 @@ class light_follower_node(Node):
                 # print(self.get_pos_list[0].x)
 
                 for i in range(NUM_ROBOT):
+                # for i in range(1):
                     self.dwa.x = np.array([self.get_pos_list[i].x, self.get_pos_list[i].y, self.get_yaw_list[i], self.u_list[i][0], self.u_list[i][1]])
-                    self.dwa.goal_pos = np.array([self.goal_pos.pose.pose.position.x, self.goal_pos.pose.pose.position.y])
+                    self.dwa.goal = np.array([self.goal_pos.pose.pose.position.x, self.goal_pos.pose.pose.position.y])
                     ob_ = copy.deepcopy(self.ob)
                     # print(ob_)
                     # print(np.delete(ob_, i, 0))
@@ -126,7 +130,7 @@ class light_follower_node(Node):
                     # cmd_vel pub
                     self.cmd_vel.linear.x = copy.deepcopy(self.u_list[i][0])
                     self.cmd_vel.angular.z = copy.deepcopy(self.u_list[i][1])
-                    print(i, cmd_vel)
+                    # print(i, self.cmd_vel)
 
                     if i == 0:
                         self.robot1_cmd_vel_pub.publish(self.cmd_vel)
@@ -142,7 +146,7 @@ class light_follower_node(Node):
                 # print(self.get_pos_list[0])
                 # print(self.get_yaw_list[0])
                 # print(self.cmd_vel)
-                # print(self.dwa.ob)
+                print(self.dwa.x)
                 # self.robot1_cmd_vel_pub.publish(self.cmd_vel)
 
         except (LookupException, ConnectivityException, ExtrapolationException) as e:

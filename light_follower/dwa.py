@@ -11,21 +11,21 @@ class Config():
 
     def __init__(self):
         # robot parameter
-        self.max_speed = 0.3  # [m/s]
-        self.min_speed = -0.1  # [m/s]
+        self.max_speed = 0.23  # [m/s]
+        self.min_speed = 0.0  # [m/s]
         self.max_yawrate = 40.0 * math.pi / 180.0  # [rad/s]
-        self.max_accel = 0.4  # [m/ss]
-        self.max_dyawrate = 40.0 * math.pi / 180.0  # [rad/ss]
+        self.max_accel = 0.1  # [m/ss]
+        self.max_dyawrate = 20.0 * math.pi / 180.0  # [rad/ss]
         self.v_reso = 0.01  # [m/s]
         self.yawrate_reso = 0.1 * math.pi / 180.0  # [rad/s]
         self.dt = 0.1  # [s]
         self.predict_time = 3.0  # [s]
-        self.to_goal_cost_gain = 1.0
-        self.speed_cost_gain = 1.0
-        self.robot_radius = 0.20  # [m]
+        self.to_goal_cost_gain = 1.0 # 1.0
+        self.speed_cost_gain = 1.0 # 1.0
+        self.robot_radius = 0.7  # [m]
 
 class dwa_approach():
-    def __init__(self, NUM_ROBOT=4, GOAL=np.array([10, 10]), X=np.array([0.0, 0.0, math.pi / 8.0, 0.0, 0.0])):
+    def __init__(self, NUM_ROBOT=4, GOAL=np.array([0, 0]), X=np.array([0.0, 0.0, math.pi / 8.0, 0.0, 0.0])):
         self.num_robots = NUM_ROBOT
         self.config = Config()
 
@@ -127,12 +127,15 @@ class dwa_approach():
                 dx = traj[ii, 0] - ox
                 dy = traj[ii, 1] - oy
 
-                r = math.sqrt(dx**2 + dy**2)
+                # r = math.sqrt(dx**2 + dy**2)
+                r = math.sqrt(dx**2 + dy**2) * 9.0
                 if r <= config.robot_radius:
                     return float("Inf")  # collision
 
                 if minr >= r:
                     minr = r
+
+                # print(r)
 
         return 1.0 / minr  # OK
 
@@ -171,7 +174,21 @@ class dwa_approach():
         # check goal
         if math.sqrt((self.x[0] - self.goal[0])**2 + (self.x[1] - self.goal[1])**2) <= self.config.robot_radius:
             print("Goal!!")
+            self.u = np.array([0.0, 0.0])
         # print(self.u)
+
+        if show_animation:
+            plt.cla()
+            plt.plot(ltraj[:, 0], ltraj[:, 1], "-g")
+            plt.plot(self.x[0], self.x[1], "xr")
+            plt.plot(self.goal[0], self.goal[1], "xb")
+            plt.plot(self.ob[:, 0], self.ob[:, 1], "ok")
+            # plt.plot(10, 10,  "ok")
+            self.plot_arrow(self.x[0], self.x[1], self.x[2])
+            plt.axis("equal")
+            plt.grid(True)
+            plt.pause(0.0001)
+
         return self.u
 
 def main():
