@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Twist
 from tf2_msgs.msg import TFMessage
 import copy
 from tf2_ros import Buffer, TransformListener, LookupException, ConnectivityException, ExtrapolationException
@@ -21,11 +21,13 @@ class robot_control:
     def __init__(self):
         pass
     
-    def 
+    # def 
 
 class light_follower_node(Node):
     def __init__(self):
         super().__init__('light_follower_node')
+
+        self.robot1_cmd_vel_pub =  self.create_publisher(Twist, 'robot1/cmd_vel', 1)
 
         self.inital_pose_sub = self.create_subscription(PoseWithCovarianceStamped, 'initialpose', self.initial_pose_callback, rclpy.qos.qos_profile_sensor_data)
 
@@ -56,12 +58,15 @@ class light_follower_node(Node):
         for i in range(NUM_ROBOT):
             self.u_list[i] = np.array([0.0, 0.0])
 
-        self.ob = [0 for i in range(NUM_ROBOT-1)]
+        self.ob = np.matrix(np.arange(0., NUM_ROBOT*2.).reshape(NUM_ROBOT, 2))
 
         self.goal_flag = False
+
+        self.cmd_vel = Twist()
     
     def initial_pose_callback(self, msg):
         self.goal_pos = copy.deepcopy(msg)
+        self.goal_flag = True
         return self.goal_pos
 
     def euler_from_quaternion(self, quaternion):
@@ -90,7 +95,8 @@ class light_follower_node(Node):
                 position = transform.transform.translation
                 rotation = transform.transform.rotation
                 (roll, pitch, yaw) = self.euler_from_quaternion(rotation)
-                self.ob[i] = copy.deepcopy(np.array[position.x, position.y])
+                # self.ob[i] = copy.deepcopy(np.array[position.x, position.y])
+                self.ob[i] = copy.deepcopy(np.array([position.x, position.y]))
                 self.get_pos_list[i] = copy.deepcopy(position)
                 self.get_yaw_list[i] = copy.deepcopy(yaw)
             self.init = True
@@ -98,16 +104,29 @@ class light_follower_node(Node):
             if self.init and self.goal_flag:
                 # debug
                 # print(self.get_yaw_list)
-                # print(self.goal_pos_list[0].x)
+                # print(self.get_pos_list[0].x)
 
-                # for i in range(NUM_ROBOT):
-                self.dwa.x = np.array([self.get_pos_list[i].x, self.get_pos_list[i].y, self.get_yaw_list[i], self.u_list[0], self.u_list[1]])
-                self.dwa.goal_pos = np.array([self.goal[0], self.goal[1]])
-                ob_ = copy.deepcopy(self.ob)
-                np.delete(ob_, i, 0)
-                self.dwa.ob = ob_
-                self.dwa.u = self.u_list[i]
-                self.u[i] = self.dwa.loop()
+                for i in range(NUM_ROBOT):
+                    self.dwa.x = np.array([self.get_pos_list[i].x, self.get_pos_list[i].y, self.get_yaw_list[i], self.u_list[i][0], self.u_list[i][1]])
+                    self.dwa.goal_pos = np.array([self.goal_pos.pose.pose.position.x, self.goal_pos.pose.pose.position.y])
+                    ob_ = copy.deepcopy(self.ob)
+                    # print(ob_)
+                    # print(np.delete(ob_, i, 0))
+                    self.dwa.ob = np.delete(ob_, i, 0)
+                    # print(ob_)
+                    # self.dwa.ob = ob_
+                    # print(self.u_list[i])
+                    self.dwa.u = self.u_list[i]
+                    self.u_list[i] = self.dwa.loop()
+                    # print("robot" + str(i+1) , self.u_list[i])
+
+                self.cmd_vel.linear.x = self.u_list[0][0]
+                self.cmd_vel.angular.z = self.u_list[0][1]
+                # print(self.get_pos_list[0])
+                # print(self.get_yaw_list[0])
+                # print(self.cmd_vel)
+                print(self.u_list[0])
+                self.robot1_cmd_vel_pub.publish(self.cmd_vel)
 
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
             self.get_logger().info(f'Exception: {e}')
