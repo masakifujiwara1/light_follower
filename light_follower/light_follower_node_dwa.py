@@ -6,9 +6,9 @@ import copy
 from tf2_ros import Buffer, TransformListener, LookupException, ConnectivityException, ExtrapolationException
 import tf2_geometry_msgs
 import numpy as np
-from . import pid
+from . import dwa
 
-TIME_PERIOD = 0.2
+TIME_PERIOD = 0.05
 NUM_ROBOT = 4
 
 class calc_relative_pos:
@@ -40,7 +40,7 @@ class light_follower_node(Node):
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-        self.timer = self.create_timer(0.025, self.timer_callback)
+        self.timer = self.create_timer(TIME_PERIOD, self.timer_callback)
 
         # self.time_period = TIME_PERIOD
         # self.tmr = self.create_timer(self.time_period, self.callback)
@@ -53,11 +53,10 @@ class light_follower_node(Node):
         # goal pose 
         self.goal_pos = 0
 
-        self.pid = []
-
-        # instance pid
+        self.dwa = []
+        # instance dwa
         for i in range(NUM_ROBOT):
-            self.pid.append(pid.pid_controller())
+            self.dwa.append(dwa.dwa_approach(NUM_ROBOT))
 
         # robot_control
         self.u_list = [0 for i in range(NUM_ROBOT)]
@@ -65,11 +64,15 @@ class light_follower_node(Node):
             self.u_list[i] = np.array([0.0, 0.0])
 
         self.ob = np.matrix(np.arange(0., NUM_ROBOT*2.).reshape(NUM_ROBOT, 2))
+        self.ob[0] = 5
         self.ob *= 5
 
         self.goal_flag = False
 
         self.cmd_vel = Twist()
+
+        # while True:
+        #     self.loop()
     
     def initial_pose_callback(self, msg):
         self.goal_pos = copy.deepcopy(msg)
@@ -103,31 +106,36 @@ class light_follower_node(Node):
                 position = transform.transform.translation
                 rotation = transform.transform.rotation
                 (roll, pitch, yaw) = self.euler_from_quaternion(rotation)
-                # self.ob[i] = copy.deepcopy(np.array([position.x, position.y]))
+                self.ob[i] = copy.deepcopy(np.array([position.x, position.y]))
                 self.get_pos_list[i] = copy.deepcopy(position)
                 self.get_yaw_list[i] = copy.deepcopy(yaw)
             self.init = True
 
+        # except (LookupException, ConnectivityException, ExtrapolationException) as e:
+        #     self.get_logger().info(f'Exception: {e}')
+
             # print(self.ob)
+
+    # def loop(self):
 
             if self.init and self.goal_flag:
                 # debug
                 # print(self.get_yaw_list)
                 # print(self.get_pos_list[0].x)
 
-                # for i in range(NUM_ROBOT):
-                for i in range(1):
-                    self.pid[i].x = np.array([self.get_pos_list[i].x, self.get_pos_list[i].y, self.get_yaw_list[i], self.u_list[i][0], self.u_list[i][1]])
-                    self.pid[i].goal = np.array([self.goal_pos.pose.pose.position.x, self.goal_pos.pose.pose.position.y])
-                    # ob_ = copy.deepcopy(self.ob)
+                for i in range(NUM_ROBOT):
+                # for i in range(1):
+                    self.dwa[i].x = np.array([self.get_pos_list[i].x, self.get_pos_list[i].y, self.get_yaw_list[i], self.u_list[i][0], self.u_list[i][1]])
+                    self.dwa[i].goal = np.array([self.goal_pos.pose.pose.position.x, self.goal_pos.pose.pose.position.y])
+                    ob_ = copy.deepcopy(self.ob)
                     # print(ob_)
                     # print(np.delete(ob_, i, 0))
-                    # self.pid.ob = np.delete(ob_, i, 0)
+                    self.dwa[i].ob = np.delete(ob_, i, 0)
                     # print(ob_)
-                    # self.pid.ob = ob_
+                    # self.dwa.ob = ob_
                     # print(self.u_list[i])
-                    # self.pid.u = self.u_list[i]
-                    self.u_list[i] = copy.deepcopy(self.pid[i].loop())
+                    self.dwa[i].u = self.u_list[i]
+                    self.u_list[i] = copy.deepcopy(self.dwa[i].loop())
                     # print("robot" + str(i+1) , self.u_list[i])
 
                     # cmd_vel pub
@@ -149,11 +157,12 @@ class light_follower_node(Node):
                 # print(self.get_pos_list[0])
                 # print(self.get_yaw_list[0])
                 # print(self.cmd_vel)
-                print(self.pid[0].u)
+                print(self.dwa[0].x)
                 # self.robot1_cmd_vel_pub.publish(self.cmd_vel)
 
         except (LookupException, ConnectivityException, ExtrapolationException) as e:
             self.get_logger().info(f'Exception: {e}')
+
 
 def main(args=None):
     rclpy.init(args=args)

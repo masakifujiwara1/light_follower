@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'light_follower_node = light_follower.light_follower_node:main'
+            'light_follower_node = light_follower.light_follower_node:main',
+            'light_follower_node_dwa = light_follower.light_follower_node_dwa:main'
         ],
     },
 )

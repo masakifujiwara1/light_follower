@@ -22,7 +22,7 @@ class Config():
         self.predict_time = 3.0  # [s]
         self.to_goal_cost_gain = 1.0 # 1.0
         self.speed_cost_gain = 1.0 # 1.0
-        self.robot_radius = 0.7  # [m]
+        self.robot_radius = 0.18  # [m]
 
 class dwa_approach():
     def __init__(self, NUM_ROBOT=4, GOAL=np.array([0, 0]), X=np.array([0.0, 0.0, math.pi / 8.0, 0.0, 0.0])):
