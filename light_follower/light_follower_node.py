@@ -6,6 +6,7 @@ import copy
 from tf2_ros import Buffer, TransformListener, LookupException, ConnectivityException, ExtrapolationException
 import tf2_geometry_msgs
 import numpy as np
+import math
 from . import pid
 
 TIME_PERIOD = 0.2
@@ -61,11 +62,15 @@ class light_follower_node(Node):
 
         # robot_control
         self.u_list = [0 for i in range(NUM_ROBOT)]
+        self.dist_list = [0 for i in range(NUM_ROBOT)]
+
         for i in range(NUM_ROBOT):
             self.u_list[i] = np.array([0.0, 0.0])
 
         self.ob = np.matrix(np.arange(0., NUM_ROBOT*2.).reshape(NUM_ROBOT, 2))
         self.ob *= 5
+
+        self.store_robot_num = 10
 
         self.goal_flag = False
 
@@ -119,22 +124,29 @@ class light_follower_node(Node):
                 for i in range(1):
                     self.pid[i].x = np.array([self.get_pos_list[i].x, self.get_pos_list[i].y, self.get_yaw_list[i], self.u_list[i][0], self.u_list[i][1]])
                     self.pid[i].goal = np.array([self.goal_pos.pose.pose.position.x, self.goal_pos.pose.pose.position.y])
-                    # ob_ = copy.deepcopy(self.ob)
-                    # print(ob_)
-                    # print(np.delete(ob_, i, 0))
-                    # self.pid.ob = np.delete(ob_, i, 0)
-                    # print(ob_)
-                    # self.pid.ob = ob_
-                    # print(self.u_list[i])
-                    # self.pid.u = self.u_list[i]
-                    self.u_list[i] = copy.deepcopy(self.pid[i].loop())
-                    # print("robot" + str(i+1) , self.u_list[i])
+
+                    self.u_list[i], self.dist_list[i] = copy.deepcopy(self.pid[i].loop())
 
                     # cmd_vel pub
                     self.cmd_vel.linear.x = copy.deepcopy(self.u_list[i][0])
                     self.cmd_vel.angular.z = copy.deepcopy(self.u_list[i][1])
-                    # print(i, self.cmd_vel)
 
+                    # check between robots
+                    robot_dist_min = 10000
+                    # calc_between = np.delete(self.get_pos_list, i, 0)
+                    for j in range(NUM_ROBOT):
+                        # print(calc_between[j])
+                        if not j == i:
+                            x_ = calc_between[j].x - self.get_pos_list[i].x
+                            y_ = calc_between[j].y - self.get_pos_list[i].y
+                            calc_req = math.sqrt(x_*x_ + y_*y_)
+                            if calc_req < robot_dist_min:
+                                robot_dist_min = calc_req
+                                self.store_robot_num = j
+                    
+                    if robot_dist_min <= ROBOTS_DIST:
+                        pass
+                    
                     if i == 0:
                         self.robot1_cmd_vel_pub.publish(self.cmd_vel)
                     if i == 1:
@@ -144,12 +156,8 @@ class light_follower_node(Node):
                     if i == 3:
                         self.robot4_cmd_vel_pub.publish(self.cmd_vel)
 
-                # self.cmd_vel.linear.x = self.u_list[0][0]
-                # self.cmd_vel.angular.z = self.u_list[0][1]
-                # print(self.get_pos_list[0])
-                # print(self.get_yaw_list[0])
-                # print(self.cmd_vel)
-                print(self.pid[0].u)
+                # print(self.pid[0].u)
+                # print(self.dist_list)
                 # self.robot1_cmd_vel_pub.publish(self.cmd_vel)
 
         except (LookupException, ConnectivityException, ExtrapolationException) as e:

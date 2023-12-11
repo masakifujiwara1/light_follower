@@ -22,7 +22,7 @@ class Config():
         self.angle_kp = 1.0
         self.angle_ki = 0.3
         self.angle_kd = 0.05
-        self.angle_limit = 1.0 # max 2.8
+        self.angle_limit = 0.5# max 2.8
 
         self.distance_kp = 0.1
         self.distance_ki = 0.01
@@ -74,7 +74,7 @@ class pid_controller():
             self.u = np.array([0.0, 0.0])
         # print(self.u)
 
-        return self.u
+        return self.u, distance2goal
 
 def main():
     print(__file__ + " start!!")
