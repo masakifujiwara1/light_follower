@@ -11,6 +11,7 @@ from . import pid
 
 TIME_PERIOD = 0.2
 NUM_ROBOT = 4
+ROBOTS_DIST = 0.6
 
 class calc_relative_pos:
     def __init__(self):
@@ -120,8 +121,8 @@ class light_follower_node(Node):
                 # print(self.get_yaw_list)
                 # print(self.get_pos_list[0].x)
 
-                # for i in range(NUM_ROBOT):
-                for i in range(1):
+                for i in range(NUM_ROBOT):
+                # for i in range(1):
                     self.pid[i].x = np.array([self.get_pos_list[i].x, self.get_pos_list[i].y, self.get_yaw_list[i], self.u_list[i][0], self.u_list[i][1]])
                     self.pid[i].goal = np.array([self.goal_pos.pose.pose.position.x, self.goal_pos.pose.pose.position.y])
 
@@ -133,19 +134,22 @@ class light_follower_node(Node):
 
                     # check between robots
                     robot_dist_min = 10000
+                    self.store_robot_num = 100
                     # calc_between = np.delete(self.get_pos_list, i, 0)
                     for j in range(NUM_ROBOT):
                         # print(calc_between[j])
                         if not j == i:
-                            x_ = calc_between[j].x - self.get_pos_list[i].x
-                            y_ = calc_between[j].y - self.get_pos_list[i].y
+                            x_ = self.get_pos_list[j].x - self.get_pos_list[i].x
+                            y_ = self.get_pos_list[j].y - self.get_pos_list[i].y
                             calc_req = math.sqrt(x_*x_ + y_*y_)
                             if calc_req < robot_dist_min:
                                 robot_dist_min = calc_req
                                 self.store_robot_num = j
                     
                     if robot_dist_min <= ROBOTS_DIST:
-                        pass
+                        if self.dist_list[i] > self.dist_list[self.store_robot_num]:
+                            self.cmd_vel.linear.x = 0.0
+                            # self.cmd_vel.angular.z = 0.0
                     
                     if i == 0:
                         self.robot1_cmd_vel_pub.publish(self.cmd_vel)
